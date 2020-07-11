@@ -1,8 +1,8 @@
 /*
  * Proyecto SESCCA
- * Desarrollo de prototipo 2 de tipo conductual para estudiantes.
+ * Desarrollo de prototipo 3 de tipo conductual para estudiantes.
  * Controlador: ESP8266
- * Actuadores: Teclado 5 botones analógico, Matriz LED 8x8, Parlante de 0.25 w 
+ * Actuadores: 2 botones de tipo NA, Cinta LED Neopixel", Parlante de 0.25 w 
  * Sensores: 2 sensores de proximidad
  * Envío de datos como Cliente a través de HTTPCLient
  * Recepción de datos como Servidor
@@ -10,18 +10,24 @@
  * Versión: 1.0
  */
 
-#include "LedControlMS.h"
-LedControl lc = LedControl(13,14,2,1);
+#include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+  #include <avr/power.h>
+#endif
+
+// Pin salida Neopixel
+#define LED 14
+
+// Número de LEDS
+#define NUMPIXELS 8
+
+Adafruit_NeoPixel pixels(NUMPIXELS, LED, NEO_GRB+NEO_KHZ800);
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 
 #include "pitches.h"
 
-#include "images.h"
-
-// Habilitar pin analógico para teclado
-const int analogInPin=A0;
 
 // Conexión a Red
 const char* ssid     = "MOVISTAR_FIBRA_0440"; // Nombre Red
@@ -36,10 +42,13 @@ unsigned long currentTime = millis();
 unsigned long previousTime = 0;
 const long timeoutTime = 2000;
 
+// Pines donde se conectan los botones
+const byte buttonPin1 = 4;
+const byte buttonPin2 = 5;
 
 // Pines donde se conectan los sensores
-const byte sensorPin1 = 5;
-const byte sensorPin2 = 4;
+const byte sensorPin1 = 13;
+const byte sensorPin2 = 12;
 
 // Pin donde se conecta el parlante
 const byte soundPin = 15;
@@ -52,11 +61,26 @@ int noteDurations[] = {
   4, 8, 8, 4, 4, 4, 4, 4
 };
 
+// Variables para visualización
+bool circle = false;
+
 // Variables para nivel de conducta
 short int cont=0, cont_aux=0;
 
 // Variables para envío y recepción de datos
 bool data = false, alert = false;
+
+// Funciones Interrupcion Botones
+ICACHE_RAM_ATTR void cont_plus(){
+  cont_aux++;
+  detachInterrupt(digitalPinToInterrupt(buttonPin1));
+  detachInterrupt(digitalPinToInterrupt(buttonPin2));
+}
+ICACHE_RAM_ATTR void cont_minus(){
+  cont_aux--;
+  detachInterrupt(digitalPinToInterrupt(buttonPin1));
+  detachInterrupt(digitalPinToInterrupt(buttonPin2));
+}
 
 void setup(){
   Serial.begin(115200);
@@ -75,10 +99,14 @@ void setup(){
 
   server.begin();
   delay(100);
-  // Configuración Matriz LED
-  lc.shutdown(0,false);
-  lc.setIntensity(0,1); // Los valores están entre 1 y 15
-  lc.clearDisplay(0);
+  // Configuración LED
+  #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
+  clock_prescale_set(clock_div_1);
+  #endif
+  pixels.begin();
+  // Activar resistores de PULL-UP
+  pinMode(buttonPin1, INPUT_PULLUP);
+  pinMode(buttonPin2, INPUT_PULLUP);
 
   // Sensores como Entradas
   pinMode(sensorPin1, INPUT);
@@ -89,6 +117,7 @@ void setup(){
 }
 
 void loop(){
+  pixels.clear();
   visualize(cont);
   receive_from_client();
   if(cont!=cont_aux){
@@ -99,19 +128,19 @@ void loop(){
     cont = cont_aux;
     //send_data();
   }
-  if(cont==5){
-    represent(heart,5000);
-    cont=0;
-    cont_aux=0;
-  }
   if(data==true){
     data = false;
     if(alert==true){
       Serial.println("Alerta");
+      attachInterrupt(digitalPinToInterrupt(buttonPin1), cont_plus, RISING);    
+      attachInterrupt(digitalPinToInterrupt(buttonPin2), cont_minus, RISING);
       alarm();
       alert = false;
-      count();
     }
+  }
+  if(cont==5){
+    cont=0;
+    cont_aux=0;
   }
 //  if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
 //    alarm();
@@ -196,100 +225,43 @@ void send_data(){
   server.begin();
 }
 
-// Función de Visualización OLED 
-void visualize(int counter){
-  lc.clearDisplay(0);
-  switch(counter){
-    case 1:
-      escalera[7] = 240;
-      escalera[6] = 112;
-      escalera[5] = 48;
-      escalera[4] = 16;
-      escalera[3] = 0;
-      escalera[2] = 0;
-      escalera[1] = 0;
-      break;
-   case 2:
-      escalera[7] = 248;
-      escalera[6] = 120;
-      escalera[5] = 56;
-      escalera[4] = 24;
-      escalera[3] = 8;
-      escalera[2] = 0;
-      escalera[1] = 0;
-      break;
-   case 3:
-      escalera[7] = 252;
-      escalera[6] = 124;
-      escalera[5] = 60;
-      escalera[4] = 28;
-      escalera[3] = 12;
-      escalera[2] = 4;
-      escalera[1] = 0;
-      break;
-   case 4:
-      escalera[7] = 254;
-      escalera[6] = 126;
-      escalera[5] = 62;
-      escalera[4] = 30;
-      escalera[3] = 14;
-      escalera[2] = 6;
-      escalera[1] = 2;
-      break;
-    default:
-        escalera[7] = 224;
-        escalera[6] = 96;
-        escalera[5] = 32;
-        escalera[4] = 0;
-        escalera[3] = 0;
-        escalera[2] = 0;
-        escalera[1] = 0;
-      break;    
-    }
-    represent(escalera,1000);
-    escalera[0] = 1;
-    represent(escalera,1000);
-    escalera[0] = 0;
-}
 
-// Función Mostrar Matriz
-void represent(byte *Datos, int delay_){
-  for(int i=0;i<8;i++){
-    lc.setColumn(0,i,Datos[7-i]);
-  }
-  delay(delay_);
-}
 
 // Función para animación
 void animation(short int cont1, short int cont2){
+  int j=0;
   if(cont2>cont1){
-    represent(happy, 2000);
+    while(j<4){
+      pixels.clear();
+      for(int i=0; i<NUMPIXELS;i++){
+        pixels.setPixelColor(i, pixels.Color(50, 220, 0));
+        pixels.show();
+        delay(200);
+      }
+      j++;
+    }
+    j=0;
   }else if(cont2<cont1){
-    represent(openeyes3,500);
-    represent(openeyes2,500);
-    represent(openeyes3,500);
-    represent(openeyes2,500);
+    while(j<4){
+      pixels.clear();
+      for(int i=NUMPIXELS-1; i>=0;i--){
+        pixels.setPixelColor(i, pixels.Color(220, 50, 0));
+        pixels.show();
+        delay(200);
+      }
+      j++;
+    }
+    j=0;
   }
 }
 
-// Función counter-tecla
-void count(){
-  int tecla=255;
-  while(tecla==255){
-    tecla = leer_tecla();
-    Serial.println(tecla);
+// Función de Visualización LED 
+void visualize(int counter){
+  pixels.clear();
+  for(int i=0; i<counter+3;i++){
+    pixels.setPixelColor(i, pixels.Color(50, 150, 0));
   }
-  if(tecla==3){
-    cont_aux++;
-    tecla=255;
-  }else if(tecla==2){
-    cont_aux--;
-    tecla=255;
-  }else{
-    data=true;
-    alert=true;
-    tecla=255;
-  }
+  pixels.show();
 }
 
 // Función de Alerta(parlante)
@@ -302,51 +274,4 @@ void alarm(){
     delay(pauseBetweenNotes);
     noTone(soundPin);
   }
-}
-
-// Función lectura Teclado Analógico
-int leer_tecla(){
-  int valor_tecla, tecla_pulsada, t, valor_original, cont_veces;
-  tecla_pulsada=255;
-  valor_tecla=analogRead(analogInPin);
-  if (valor_tecla > 800){
-    for (t=0;t<50;t++){
-      delay(1);
-    }
-    valor_original=valor_tecla;
-    cont_veces=0;
-
-    for (t=1;t<=40;t++){
-      valor_tecla=analogRead(analogInPin);
-      if(884<valor_tecla && valor_tecla<904){
-        tecla_pulsada=1;//Azul
-      }
-      if(855<valor_tecla && valor_tecla<875){
-        tecla_pulsada=2;//Verde
-      }
-      if(979<valor_tecla && valor_tecla<999){
-        tecla_pulsada=3;//Blanco
-      }
-      if(924<valor_tecla && valor_tecla<944){
-        tecla_pulsada=4;//Rojo
-      }
-      if(826<=valor_tecla && valor_tecla<846){
-        tecla_pulsada=5;//Amarillo 
-      }
-
-      if(valor_original==valor_tecla){
-        cont_veces++;
-      }
-    }
-  }
-  if(cont_veces > 2){
-    for (t=0;t<100;t++){
-      delay(1);
-    }
-    return tecla_pulsada;
-  }
-  else{
-    return 255;
-  }
-  
 }
