@@ -44,7 +44,7 @@ const byte sensorPin1 = 13;
 const byte sensorPin2 = 12;
 
 // Pin donde se conecta el parlante
-const byte soundPin = 2;
+const byte soundPin = 16;
 
 // Melodía para alarma
 int melody[] = {
@@ -110,7 +110,7 @@ void setup(){
   pinMode(sensorPin2, INPUT);
 
   // Parlante como salida
-  pinMode(soundPin, OUTPUT);
+  //pinMode(soundPin, OUTPUT);
 }
 
 void loop(){

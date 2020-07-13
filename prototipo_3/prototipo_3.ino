@@ -259,7 +259,7 @@ void animation(short int cont1, short int cont2){
 void visualize(int counter){
   pixels.clear();
   for(int i=0; i<counter+3;i++){
-    pixels.setPixelColor(i, pixels.Color(50, 150, 0));
+    pixels.setPixelColor(i, pixels.Color(0, 50, 0));
   }
   pixels.show();
 }

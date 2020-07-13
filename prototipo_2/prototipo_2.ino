@@ -201,55 +201,55 @@ void visualize(int counter){
   lc.clearDisplay(0);
   switch(counter){
     case 1:
-      escalera[7] = 240;
-      escalera[6] = 112;
-      escalera[5] = 48;
-      escalera[4] = 16;
-      escalera[3] = 0;
-      escalera[2] = 0;
-      escalera[1] = 0;
+      escalera[0] = 240;
+      escalera[1] = 112;
+      escalera[2] = 48;
+      escalera[3] = 16;
+      escalera[4] = 0;
+      escalera[5] = 0;
+      escalera[6] = 0;
       break;
    case 2:
-      escalera[7] = 248;
-      escalera[6] = 120;
-      escalera[5] = 56;
-      escalera[4] = 24;
-      escalera[3] = 8;
-      escalera[2] = 0;
-      escalera[1] = 0;
+      escalera[0] = 248;
+      escalera[1] = 120;
+      escalera[2] = 56;
+      escalera[3] = 24;
+      escalera[4] = 8;
+      escalera[5] = 0;
+      escalera[6] = 0;
       break;
    case 3:
-      escalera[7] = 252;
-      escalera[6] = 124;
-      escalera[5] = 60;
-      escalera[4] = 28;
-      escalera[3] = 12;
-      escalera[2] = 4;
-      escalera[1] = 0;
+      escalera[0] = 252;
+      escalera[1] = 124;
+      escalera[2] = 60;
+      escalera[3] = 28;
+      escalera[4] = 12;
+      escalera[5] = 4;
+      escalera[6] = 0;
       break;
    case 4:
-      escalera[7] = 254;
-      escalera[6] = 126;
-      escalera[5] = 62;
-      escalera[4] = 30;
-      escalera[3] = 14;
-      escalera[2] = 6;
-      escalera[1] = 2;
+      escalera[0] = 254;
+      escalera[1] = 126;
+      escalera[2] = 62;
+      escalera[3] = 30;
+      escalera[4] = 14;
+      escalera[5] = 6;
+      escalera[6] = 2;
       break;
     default:
-        escalera[7] = 224;
-        escalera[6] = 96;
-        escalera[5] = 32;
-        escalera[4] = 0;
+        escalera[0] = 224;
+        escalera[1] = 96;
+        escalera[2] = 32;
         escalera[3] = 0;
-        escalera[2] = 0;
-        escalera[1] = 0;
+        escalera[4] = 0;
+        escalera[5] = 0;
+        escalera[6] = 0;
       break;    
     }
     represent(escalera,1000);
-    escalera[0] = 1;
+    escalera[7] = 1;
     represent(escalera,1000);
-    escalera[0] = 0;
+    escalera[7] = 0;
 }
 
 // Función Mostrar Matriz
