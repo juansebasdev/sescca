@@ -57,6 +57,8 @@ short int cont=0, cont_aux=0;
 
 // Variables para envío y recepción de datos
 bool data = false, alert = false;
+String id = "2";
+int mov = 0;
 
 void setup(){
   Serial.begin(115200);
@@ -97,7 +99,7 @@ void loop(){
       cont_aux=0;
     }
     cont = cont_aux;
-    //send_data();
+    send_data();
   }
   if(cont==5){
     represent(heart,5000);
@@ -113,9 +115,10 @@ void loop(){
       count();
     }
   }
-//  if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
-//    alarm();
-//  }
+  if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
+    mov++;
+    send_data();
+  }
 }
 
 // Función para recepción de datos desde los clientes
@@ -169,10 +172,10 @@ void send_data(){
   if(WiFi.status() == WL_CONNECTED){
     HTTPClient http;
 
-    String data_to_send = "number=" + String(cont);
+    String data_to_send = "number=" + String(cont) + "&mov=" + String(mov) + "&id=" + id;
     Serial.println(data_to_send);
 
-    http.begin("http://192.168.1.10/datos-prueba.php");
+    http.begin("http://192.168.1.21/datos-prueba.php");
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
     int code_request = http.POST(data_to_send);
@@ -201,45 +204,45 @@ void visualize(int counter){
   lc.clearDisplay(0);
   switch(counter){
     case 1:
-      escalera[0] = 240;
-      escalera[1] = 112;
-      escalera[2] = 48;
-      escalera[3] = 16;
+      escalera[0] = 128;
+      escalera[1] = 192;
+      escalera[2] = 224;
+      escalera[3] = 240;
       escalera[4] = 0;
       escalera[5] = 0;
       escalera[6] = 0;
       break;
    case 2:
-      escalera[0] = 248;
-      escalera[1] = 120;
-      escalera[2] = 56;
-      escalera[3] = 24;
-      escalera[4] = 8;
+      escalera[0] = 128;
+      escalera[1] = 192;
+      escalera[2] = 224;
+      escalera[3] = 240;
+      escalera[4] = 248;
       escalera[5] = 0;
       escalera[6] = 0;
       break;
    case 3:
-      escalera[0] = 252;
-      escalera[1] = 124;
-      escalera[2] = 60;
-      escalera[3] = 28;
-      escalera[4] = 12;
-      escalera[5] = 4;
+      escalera[0] = 128;
+      escalera[1] = 192;
+      escalera[2] = 224;
+      escalera[3] = 240;
+      escalera[4] = 248;
+      escalera[5] = 252;
       escalera[6] = 0;
       break;
    case 4:
-      escalera[0] = 254;
-      escalera[1] = 126;
-      escalera[2] = 62;
-      escalera[3] = 30;
-      escalera[4] = 14;
-      escalera[5] = 6;
-      escalera[6] = 2;
+      escalera[0] = 128;
+      escalera[1] = 192;
+      escalera[2] = 224;
+      escalera[3] = 240;
+      escalera[4] = 248;
+      escalera[5] = 252;
+      escalera[6] = 254;
       break;
     default:
-        escalera[0] = 224;
-        escalera[1] = 96;
-        escalera[2] = 32;
+        escalera[0] = 128;
+        escalera[1] = 192;
+        escalera[2] = 224;
         escalera[3] = 0;
         escalera[4] = 0;
         escalera[5] = 0;

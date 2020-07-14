@@ -62,6 +62,8 @@ short int cont=0, cont_aux=0;
 
 // Variables para envío y recepción de datos
 bool data = false, alert = false;
+String id = "1";
+int mov=0;
 
 // Funciones Interrupcion Botones
 ICACHE_RAM_ATTR void cont_plus(){
@@ -122,7 +124,7 @@ void loop(){
       cont_aux=0;
     }
     cont = cont_aux;
-    //send_data();
+    send_data();
   }
   if(data==true){
     data = false;
@@ -134,9 +136,10 @@ void loop(){
       alert = false;
     }
   }
-//  if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
-//    alarm();
-//  }
+  if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
+    mov++;
+    send_data();
+  }
 }
 
 // Función para recepción de datos desde los clientes
@@ -190,10 +193,10 @@ void send_data(){
   if(WiFi.status() == WL_CONNECTED){
     HTTPClient http;
 
-    String data_to_send = "number=" + String(cont);
+    String data_to_send = "number=" + String(cont) + "&mov=" + String(mov) +"&id=" + id;
     Serial.println(data_to_send);
 
-    http.begin("http://192.168.1.10/datos-prueba.php");
+    http.begin("http://192.168.1.21/datos-prueba.php");
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
     int code_request = http.POST(data_to_send);
