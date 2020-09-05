@@ -1,6 +1,9 @@
 # SESCCA
 Prototipos para control conductual de estudiantes.
 
+# Progamación
+Arduino IDE
+
 # Composición de Prototipos
 
 * Controlador: Tarjeta de desarrollo ESP8266
