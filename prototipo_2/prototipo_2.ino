@@ -20,6 +20,13 @@ LedControl lc = LedControl(13,14,2,1);
 
 #include "images.h"
 
+// Interrupción Timer
+#include <Ticker.h>
+Ticker scheduledTicker;
+
+volatile int interrupts;
+int number = random(10, 15);
+
 // Habilitar pin analógico para teclado
 const int analogInPin=A0;
 
@@ -45,38 +52,91 @@ const byte sensorPin2 = 4;
 const byte soundPin = 15;
 
 // Melodía para alarma
-int melody[] = {
+int melody1[] = {
   NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
 };
-int noteDurations[] = {
+int noteDurations1[] = {
   4, 8, 8, 4, 4, 4, 4, 4
 };
 
+// Melodía para valoración negativa
+int melody3[] = {
+   NOTE_C4, NOTE_C5, NOTE_A3, NOTE_A4,
+  NOTE_AS3, NOTE_AS4, 0,
+  0,
+  NOTE_C4, NOTE_C5, NOTE_A3, NOTE_A4,
+  NOTE_AS3, NOTE_AS4, 0,
+  0
+};
+int noteDurations3[] = {
+  12, 12, 12, 12,
+  12, 12, 6,
+  3,
+  12, 12, 12, 12,
+  12, 12, 6,
+  3
+};
+
+// Melodía para valoración positiva
+int melody2[] = {
+   NOTE_D5, NOTE_G4, NOTE_A4, NOTE_B4, NOTE_C5, 
+  NOTE_D5, NOTE_G4, NOTE_G4,
+  NOTE_E5, NOTE_C5, NOTE_D5, NOTE_E5, NOTE_FS5,
+  NOTE_G5, NOTE_G4, NOTE_G4,
+  NOTE_C5, NOTE_D5, NOTE_C5, NOTE_B4, NOTE_A4
+};
+int noteDurations2[] = {
+  4, 8, 8, 8,
+  4, 4, 4,
+  4,
+  8, 8, 8, 8,
+  4, 4, 4,
+  4,
+  8, 8, 8, 8
+};
+
 // Variables para nivel de conducta
-short int cont=0, cont_aux=0;
+short int cont=4, cont_aux=4;
 
 // Variables para envío y recepción de datos
 bool data = false, alert = false;
 String id = "2";
 int mov = 0;
 
+// Función Interrupcion Timer
+void onTime(){
+  interrupts++;
+  if(interrupts==number){
+    data = true;
+    alert = true;
+    interrupts = 0;
+    number = random(40, 60);
+    Serial.println(number);
+    scheduledTicker.detach();
+  }
+}
+
 void setup(){
   Serial.begin(115200);
   delay(1000);
-  Serial.print("Conectando a ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED){
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("Conectado");
-  Serial.println("Dirección IP: ");
-  Serial.println(WiFi.localIP());
+//  Serial.print("Conectando a ");
+//  Serial.println(ssid);
+//  WiFi.begin(ssid, password);
+//  while (WiFi.status() != WL_CONNECTED){
+//    delay(500);
+//    Serial.print(".");
+//  }
+//  Serial.println("");
+//  Serial.println("Conectado");
+//  Serial.println("Dirección IP: ");
+//  Serial.println(WiFi.localIP());
+//
+//  server.begin();
+//  delay(100);
 
-  server.begin();
-  delay(100);
+  // Iniciar Timer
+  scheduledTicker.attach_ms_scheduled(1000, onTime);
+  
   // Configuración Matriz LED
   lc.shutdown(0,false);
   lc.setIntensity(0,1); // Los valores están entre 1 y 15
@@ -91,7 +151,6 @@ void setup(){
 }
 
 void loop(){
-  visualize(cont);
   receive_from_client();
   if(cont!=cont_aux){
     animation(cont,cont_aux);
@@ -99,26 +158,27 @@ void loop(){
       cont_aux=0;
     }
     cont = cont_aux;
-    send_data();
+    //send_data();
   }
-  if(cont==5){
-    represent(heart,5000);
-    cont=0;
-    cont_aux=0;
+  if(cont>=5){
+    //represent(heart,5000);
+    cont=5;
+    cont_aux=5;
   }
   if(data==true){
     data = false;
     if(alert==true){
       Serial.println("Alerta");
-      alarm();
+      alarm(noteDurations1, melody1);
       alert = false;
       count();
     }
   }
   if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
     mov++;
-    send_data();
+    //send_data();
   }
+  visualize(cont);
 }
 
 // Función para recepción de datos desde los clientes
@@ -204,55 +264,63 @@ void visualize(int counter){
   lc.clearDisplay(0);
   switch(counter){
     case 1:
-      escalera[0] = 128;
-      escalera[1] = 192;
-      escalera[2] = 224;
-      escalera[3] = 240;
+      escalera[1] = 0;
+      escalera[2] = 0;
+      escalera[3] = 0;
       escalera[4] = 0;
-      escalera[5] = 0;
-      escalera[6] = 0;
-      break;
-   case 2:
-      escalera[0] = 128;
-      escalera[1] = 192;
-      escalera[2] = 224;
-      escalera[3] = 240;
-      escalera[4] = 248;
-      escalera[5] = 0;
-      escalera[6] = 0;
+      escalera[5] = 7;
+      escalera[6] = 3;
+      escalera[7] = 1;
+    case 2:
+      escalera[1] = 0;
+      escalera[2] = 0;
+      escalera[3] = 0;
+      escalera[4] = 15;
+      escalera[5] = 7;
+      escalera[6] = 3;
+      escalera[7] = 1;
       break;
    case 3:
-      escalera[0] = 128;
-      escalera[1] = 192;
-      escalera[2] = 224;
-      escalera[3] = 240;
-      escalera[4] = 248;
-      escalera[5] = 252;
-      escalera[6] = 0;
+      escalera[1] = 0;
+      escalera[2] = 0;
+      escalera[3] = 31;
+      escalera[4] = 15;
+      escalera[5] = 7;
+      escalera[6] = 3;
+      escalera[7] = 1;
       break;
    case 4:
-      escalera[0] = 128;
-      escalera[1] = 192;
-      escalera[2] = 224;
-      escalera[3] = 240;
-      escalera[4] = 248;
-      escalera[5] = 252;
-      escalera[6] = 254;
+      escalera[1] = 0;
+      escalera[2] = 63;
+      escalera[3] = 31;
+      escalera[4] = 15;
+      escalera[5] = 7;
+      escalera[6] = 3;
+      escalera[7] = 1;
       break;
-    default:
-        escalera[0] = 128;
-        escalera[1] = 192;
-        escalera[2] = 224;
-        escalera[3] = 0;
-        escalera[4] = 0;
-        escalera[5] = 0;
-        escalera[6] = 0;
+   case 5:
+      escalera[1] = 127;
+      escalera[2] = 63;
+      escalera[3] = 31;
+      escalera[4] = 15;
+      escalera[5] = 7;
+      escalera[6] = 3;
+      escalera[7] = 1;
+      break;
+  default:
+      escalera[1] = 0;
+      escalera[2] = 0;
+      escalera[3] = 0;
+      escalera[4] = 0;
+      escalera[5] = 7;
+      escalera[6] = 3;
+      escalera[7] = 1;
       break;    
     }
     represent(escalera,1000);
-    escalera[7] = 1;
+    escalera[0] = 128;
     represent(escalera,1000);
-    escalera[7] = 0;
+    escalera[0] = 0;
 }
 
 // Función Mostrar Matriz
@@ -267,36 +335,51 @@ void represent(byte *Datos, int delay_){
 void animation(short int cont1, short int cont2){
   if(cont2>cont1){
     represent(happy, 2000);
+    alarm(noteDurations2, melody2);
   }else if(cont2<cont1){
     represent(openeyes3,500);
     represent(openeyes2,500);
     represent(openeyes3,500);
     represent(openeyes2,500);
+    alarm(noteDurations3, melody3);
   }
 }
 
 // Función counter-tecla
 void count(){
+  
   int tecla=255;
+  interrupts = 0;
   while(tecla==255){
+    trans();
     tecla = leer_tecla();
-    Serial.println(tecla);
+    Serial.println(interrupts);
+    interrupts++;
+    delay(100);
+    if (interrupts > 20){
+      break;
+    }
   }
   if(tecla==3){
     cont_aux++;
     tecla=255;
-  }else if(tecla==2){
+  }else if(tecla==1){
     cont_aux--;
     tecla=255;
-  }else{
+  }else if (interrupts != 0){ 
+    interrupts = 0;
+    visualize(cont);
+  }
+  else{
     data=true;
     alert=true;
     tecla=255;
   }
+  scheduledTicker.attach_ms_scheduled(1000, onTime);
 }
 
 // Función de Alerta(parlante)
-void alarm(){
+void alarm(int noteDurations[], int melody[]){
   for(int thisNote=0; thisNote<8; thisNote++){
     int noteDuration = 1000/noteDurations[thisNote];
     tone(soundPin, melody[thisNote], noteDuration);
@@ -321,19 +404,19 @@ int leer_tecla(){
 
     for (t=1;t<=40;t++){
       valor_tecla=analogRead(analogInPin);
-      if(884<valor_tecla && valor_tecla<904){
+      if(817<valor_tecla && valor_tecla<857){
         tecla_pulsada=1;//Azul
       }
-      if(855<valor_tecla && valor_tecla<875){
+      if(781<valor_tecla && valor_tecla<821){
         tecla_pulsada=2;//Verde
       }
-      if(979<valor_tecla && valor_tecla<999){
+      if(926<valor_tecla && valor_tecla<966){
         tecla_pulsada=3;//Blanco
       }
-      if(924<valor_tecla && valor_tecla<944){
+      if(865<valor_tecla && valor_tecla<905){
         tecla_pulsada=4;//Rojo
       }
-      if(826<=valor_tecla && valor_tecla<846){
+      if(749<=valor_tecla && valor_tecla<789){
         tecla_pulsada=5;//Amarillo 
       }
 
@@ -351,5 +434,19 @@ int leer_tecla(){
   else{
     return 255;
   }
-  
+}
+
+void trans(){
+  for (int row=0; row<8; row++){
+    for (int col=0; col<8; col++){
+    lc.setLed(0,col,row,true); 
+      delay(5);
+    }
+  }
+  for (int row=0; row<8; row++){
+    for (int col=0; col<8; col++){
+      lc.setLed(0,col,row,false); 
+      delay(5);
+    }
+  }
 }

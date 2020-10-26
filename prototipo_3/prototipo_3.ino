@@ -2,12 +2,12 @@
  * Proyecto SESCCA
  * Desarrollo de prototipo 3 de tipo conductual para estudiantes.
  * Controlador: ESP8266
- * Actuadores: 2 botones de tipo NA, Cinta LED Neopixel", Parlante de 0.25 w 
+ * Actuadores: 2 botones de tipo NA, Cinta LED Neopixel", Motor DC 3v(vibraciones), 2 leds
  * Sensores: 2 sensores de proximidad
  * Envío de datos como Cliente a través de HTTPCLient
  * Recepción de datos como Servidor
  * Elaborado por : Juan Sebastián Bravo Meneses
- * Versión: 1.0
+ * Versión: 1.1
  */
 
 #include <Adafruit_NeoPixel.h>
@@ -15,8 +15,15 @@
   #include <avr/power.h>
 #endif
 
+// Interrupción Timer
+//#include <Ticker.h>
+//Ticker scheduledTicker;
+
+volatile int interrupts;
+//int number = random(10, 15);
+
 // Pin salida Neopixel
-#define LED 14
+#define LED 13
 
 // Número de LEDS
 #define NUMPIXELS 8
@@ -30,7 +37,7 @@ Adafruit_NeoPixel pixels(NUMPIXELS, LED, NEO_GRB+NEO_KHZ800);
 
 
 // Conexión a Red
-const char* ssid     = "MOVISTAR_FIBRA_0440"; // Nombre Red
+const char* ssid     = "MOVISTAR_FIBRA_8EF0"; // Nombre Red
 const char* password = "8227854698"; // Contraseña Red
 
 // Puerto para servidor
@@ -47,40 +54,62 @@ const byte buttonPin1 = 4;
 const byte buttonPin2 = 5;
 
 // Pines donde se conectan los sensores
-const byte sensorPin1 = 13;
+const byte sensorPin1 = 14;
 const byte sensorPin2 = 12;
 
-// Pin donde se conecta el parlante
-const byte soundPin = 15;
+// Pin donde se conecta el motor
+const byte vibePin = 15;
 
-// Melodía para alarma
-int melody[] = {
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
-};
-int noteDurations[] = {
-  4, 8, 8, 4, 4, 4, 4, 4
-};
-
-// Variables para visualización
-bool circle = false;
+// Pines donde se conecta leds(ojos)
+const byte led1 = 16;
+const byte led2 = 0;
 
 // Variables para nivel de conducta
 short int cont=0, cont_aux=0;
+bool q =false;
 
 // Variables para envío y recepción de datos
 bool data = false, alert = false;
-String id="3";
+String id="23";
 int mov=0;
+
+// Función Interrupcion Timer
+//void onTime(){
+//  interrupts++;
+//  if(interrupts==number){
+//    data = true;
+//    alert = true;
+//    interrupts = 0;
+//    number = random(40, 60);
+//    Serial.println(number);
+//    scheduledTicker.detach();
+//  }
+//}
+//void ICACHE_RAM_ATTR onTime(){
+//  interrupts++;
+//  timer1_write(2500000);
+//  Serial.println(interrupts);
+//  if(interrupts==number){
+//    data = true;
+//    alert = true;
+//    interrupts = 0;
+//    number = random(10, 25)*2;
+//    Serial.println(number);
+//  }
+//}
+
 // Funciones Interrupcion Botones
 ICACHE_RAM_ATTR void cont_plus(){
   cont_aux++;
   detachInterrupt(digitalPinToInterrupt(buttonPin1));
   detachInterrupt(digitalPinToInterrupt(buttonPin2));
+  q = false;
 }
 ICACHE_RAM_ATTR void cont_minus(){
   cont_aux--;
   detachInterrupt(digitalPinToInterrupt(buttonPin1));
   detachInterrupt(digitalPinToInterrupt(buttonPin2));
+  q = false;
 }
 
 void setup(){
@@ -100,6 +129,16 @@ void setup(){
 
   server.begin();
   delay(100);
+
+  // Iniciar Timer
+//  scheduledTicker.attach_ms_scheduled(1000, onTime);
+//  timer1_isr_init();
+//  timer1_attachInterrupt(onTime);
+//  timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+//  timer1_write(2500000);
+
+  //Serial.println(number);
+  
   // Configuración LED
   #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
   clock_prescale_set(clock_div_1);
@@ -114,12 +153,20 @@ void setup(){
   pinMode(sensorPin2, INPUT);
 
   // Parlante como salida
-  pinMode(soundPin, OUTPUT);
+  pinMode(vibePin, OUTPUT);
+
+  // Leds
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
+
+  pinMode(LED, OUTPUT);
+
+  visualize(cont);
 }
 
 void loop(){
-  pixels.clear();
-  visualize(cont);
+  //pixels.clear();  
+  //visualize(cont);
   receive_from_client();
   if(cont!=cont_aux){
     animation(cont,cont_aux);
@@ -127,6 +174,7 @@ void loop(){
       cont_aux=0;
     }
     cont = cont_aux;
+    visualize(cont);
     send_data();
   }
   if(data==true){
@@ -137,15 +185,16 @@ void loop(){
       attachInterrupt(digitalPinToInterrupt(buttonPin2), cont_minus, RISING);
       alarm();
       alert = false;
+      animation_question();
     }
   }
-  if(cont==5){
-    cont=0;
-    cont_aux=0;
+  if(cont>5){
+    cont=5;
+    cont_aux=5;
   }
   if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
-    mov++;
-    send_data();
+    //mov++;
+    //send_data();
   }
 }
 
@@ -170,9 +219,9 @@ void receive_from_client(){
             client.println("Conexión: Cerrada");
             client.println();
 
-            if(header.indexOf("GET /cont/plus")>=0){
+            if(header.indexOf("GET /?plus=true")>=0){
               cont_aux++;
-            } else if(header.indexOf("GET /cont/minus")>=0){
+            } else if(header.indexOf("GET /?minus=true")>=0){
               cont_aux--;
             } else if(header.indexOf("GET /?data=alert")>=0){
               alert = true;
@@ -203,7 +252,7 @@ void send_data(){
     String data_to_send = "number=" + String(cont) + "&mov=" + String(mov) + "&id=" + id;
     Serial.println(data_to_send);
 
-    http.begin("http://192.168.1.21/datos-prueba.php");
+    http.begin("http://192.168.1.200/datos-prueba.php");
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
     int code_request = http.POST(data_to_send);
@@ -233,24 +282,26 @@ void send_data(){
 void animation(short int cont1, short int cont2){
   int j=0;
   if(cont2>cont1){
-    while(j<4){
+    while(j<2){
       pixels.clear();
-      for(int i=0; i<NUMPIXELS;i++){
+      for(int i=0; i<cont2+3;i++){
         pixels.setPixelColor(i, pixels.Color(50, 220, 0));
         pixels.show();
         delay(200);
       }
+      //alarm();
       j++;
     }
     j=0;
   }else if(cont2<cont1){
-    while(j<4){
+    while(j<2){
       pixels.clear();
       for(int i=NUMPIXELS-1; i>=0;i--){
         pixels.setPixelColor(i, pixels.Color(220, 50, 0));
         pixels.show();
         delay(200);
       }
+      //alarm();
       j++;
     }
     j=0;
@@ -266,14 +317,51 @@ void visualize(int counter){
   pixels.show();
 }
 
-// Función de Alerta(parlante)
+// Función de Motor(vibración)
 void alarm(){
-  for(int thisNote=0; thisNote<8; thisNote++){
-    int noteDuration = 1000/noteDurations[thisNote];
-    tone(soundPin, melody[thisNote], noteDuration);
-
-    int pauseBetweenNotes = noteDuration*1.30;
-    delay(pauseBetweenNotes);
-    noTone(soundPin);
+  int i = 0;
+  for(i=0;i<3;i++){
+    analogWrite(vibePin, 800);
+    delay(300);
+    analogWrite(vibePin, 0);
+    delay(700);
   }
+}
+
+// Función para animación Autoevaluación
+void animation_question(){
+  q = true;
+  while(q==true){
+    // Serial.println(interrupts);
+    pixels.clear();
+//    analogWrite(vibePin, 800);
+//    delay(200);
+//    analogWrite(vibePin, 0);
+    for(int i=NUMPIXELS-1; i>=0;i--){
+        pixels.setPixelColor(i, pixels.Color(120, 50, 50));
+        pixels.show();
+        digitalWrite(led1, HIGH);
+        digitalWrite(led2, HIGH);
+        delay(100);
+    }
+    pixels.clear();
+    for(int i=0; i<NUMPIXELS;i++){
+        pixels.setPixelColor(i, pixels.Color(120, 50, 50));
+        pixels.show();
+        digitalWrite(led1, LOW);
+        digitalWrite(led2, LOW);
+        delay(100);
+    }
+    interrupts = interrupts+2;
+    if (interrupts == 8){
+      q = false;
+      pixels.clear();
+      analogWrite(vibePin, 0);
+      visualize(cont);
+      detachInterrupt(digitalPinToInterrupt(buttonPin1));
+      detachInterrupt(digitalPinToInterrupt(buttonPin2));
+    }
+  }
+  //scheduledTicker.attach_ms_scheduled(1000, onTime);
+  interrupts=0;
 }

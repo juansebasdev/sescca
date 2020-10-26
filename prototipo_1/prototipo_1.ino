@@ -22,6 +22,13 @@ Adafruit_SSD1306 display;
 
 #include "images.h"
 
+// Interrupción Timer
+#include <Ticker.h>
+Ticker scheduledTicker;
+
+volatile int interrupts;
+int number = random(10, 15);
+
 // Conexión a Red
 const char* ssid     = "MOVISTAR_FIBRA_0440"; // Nombre Red
 const char* password = "8227854698"; // Contraseña Red
@@ -47,11 +54,47 @@ const byte sensorPin2 = 12;
 const byte soundPin = 16;
 
 // Melodía para alarma
-int melody[] = {
+int melody1[] = {
   NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
 };
-int noteDurations[] = {
+int noteDurations1[] = {
   4, 8, 8, 4, 4, 4, 4, 4
+};
+
+// Melodía para valoración negativa
+int melody3[] = {
+   NOTE_C4, NOTE_C5, NOTE_A3, NOTE_A4,
+  NOTE_AS3, NOTE_AS4, 0,
+  0,
+  NOTE_C4, NOTE_C5, NOTE_A3, NOTE_A4,
+  NOTE_AS3, NOTE_AS4, 0,
+  0
+};
+int noteDurations3[] = {
+  12, 12, 12, 12,
+  12, 12, 6,
+  3,
+  12, 12, 12, 12,
+  12, 12, 6,
+  3
+};
+
+// Melodía para valoración positiva
+int melody2[] = {
+   NOTE_D5, NOTE_G4, NOTE_A4, NOTE_B4, NOTE_C5, 
+  NOTE_D5, NOTE_G4, NOTE_G4,
+  NOTE_E5, NOTE_C5, NOTE_D5, NOTE_E5, NOTE_FS5,
+  NOTE_G5, NOTE_G4, NOTE_G4,
+  NOTE_C5, NOTE_D5, NOTE_C5, NOTE_B4, NOTE_A4
+};
+int noteDurations2[] = {
+  4, 8, 8, 8,
+  4, 4, 4,
+  4,
+  8, 8, 8, 8,
+  4, 4, 4,
+  4,
+  8, 8, 8, 8
 };
 
 // Variables para visualización
@@ -59,41 +102,61 @@ bool circle = false;
 
 // Variables para nivel de conducta
 short int cont=0, cont_aux=0;
+bool q = false;
 
 // Variables para envío y recepción de datos
 bool data = false, alert = false;
 String id = "1";
 int mov=0;
 
+// Función Interrupcion Timer
+void onTime(){
+  interrupts++;
+  if(interrupts==number){
+    data = true;
+    alert = true;
+    interrupts = 0;
+    number = random(40, 60);
+    Serial.println(number);
+    scheduledTicker.detach();
+  }
+}
+
 // Funciones Interrupcion Botones
 ICACHE_RAM_ATTR void cont_plus(){
   cont_aux++;
   detachInterrupt(digitalPinToInterrupt(buttonPin1));
   detachInterrupt(digitalPinToInterrupt(buttonPin2));
+  q = false;
 }
 ICACHE_RAM_ATTR void cont_minus(){
   cont_aux--;
   detachInterrupt(digitalPinToInterrupt(buttonPin1));
   detachInterrupt(digitalPinToInterrupt(buttonPin2));
+  q = false;
 }
 
 void setup(){
   Serial.begin(115200);
   delay(1000);
-  Serial.print("Conectando a ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED){
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("Conectado");
-  Serial.println("Dirección IP: ");
-  Serial.println(WiFi.localIP());
+//  Serial.print("Conectando a ");
+//  Serial.println(ssid);
+//  WiFi.begin(ssid, password);
+//  while (WiFi.status() != WL_CONNECTED){
+//    delay(500);
+//    Serial.print(".");
+//  }
+//  Serial.println("");
+//  Serial.println("Conectado");
+//  Serial.println("Dirección IP: ");
+//  Serial.println(WiFi.localIP());
+//
+//  server.begin();
+//  delay(100);
 
-  server.begin();
-  delay(100);
+  // Iniciar Timer
+  scheduledTicker.attach_ms_scheduled(1000, onTime);
+  
   // Configuración OLED
   display.begin(SSD1306_SWITCHCAPVCC,0x3c);
   display.clearDisplay();
@@ -113,10 +176,11 @@ void setup(){
 
   // Parlante como salida
   //pinMode(soundPin, OUTPUT);
+
+  visualize();
 }
 
 void loop(){
-  visualize();
   receive_from_client();
   if(cont!=cont_aux){
     animation(cont,cont_aux);
@@ -124,7 +188,12 @@ void loop(){
       cont_aux=0;
     }
     cont = cont_aux;
-    send_data();
+    visualize();
+    //send_data();
+  }
+  if(cont>5){
+    cont=5;
+    cont_aux=5;
   }
   if(data==true){
     data = false;
@@ -132,13 +201,14 @@ void loop(){
       Serial.println("Alerta");
       attachInterrupt(digitalPinToInterrupt(buttonPin1), cont_plus, RISING);    
       attachInterrupt(digitalPinToInterrupt(buttonPin2), cont_minus, RISING);
-      alarm();
+      alarm(noteDurations1, melody1);
       alert = false;
+      animation_question();
     }
   }
   if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
     mov++;
-    send_data();
+    //send_data();
   }
 }
 
@@ -222,20 +292,28 @@ void send_data(){
 
 // Función de Visualización OLED 
 void visualize(){
-  short int j=26, k=0, i=2;
+  short int i=0; //j=26, k=0, i=2;
   display.clearDisplay();
-  while(i<=14+cont*2){
-    display.fillRect(k,j,10,i,WHITE);
-    k = k+10;
-    j = j-2;
-    i=i+2;
+  display.drawRect(105, 0, 13, 32, WHITE);
+  for(i=0;i<=12;i++){
+    display.fillRect(105,i,13,1,WHITE);
   }
-  if(circle){
-    display.fillCircle(120,3,2,WHITE); 
-  }else{
-    display.drawCircle(120,3,2,WHITE);
+  for(i=12;i<=12+cont*4;i++){
+    display.fillRect(105,i,13,1,WHITE);
   }
-  circle=!circle;
+  display.drawBitmap(0,0,emoji,128,64,WHITE);
+//  while(i<=14+cont*2){
+//    display.fillRect(k,j,10,i,WHITE);
+//    k = k+10;
+//    j = j-2;
+//    i=i+2;
+//  }
+//  if(circle){
+//    display.fillCircle(120,3,2,WHITE); 
+//  }else{
+//    display.drawCircle(120,3,2,WHITE);
+//  }
+//  circle=!circle;
   display.display();
 }
 
@@ -243,8 +321,10 @@ void visualize(){
 void animation(short int cont1, short int cont2){
   if(cont2>cont1){
     happy();
+    alarm(noteDurations2, melody2);
   }else if(cont2<cont1){
     attent();
+    alarm(noteDurations3, melody3);
   }
 }
 
@@ -276,7 +356,7 @@ void attent(){
 }
 
 // Función de Alerta(parlante)
-void alarm(){
+void alarm(int noteDurations[], int melody[]){
   for(int thisNote=0; thisNote<8; thisNote++){
     int noteDuration = 1000/noteDurations[thisNote];
     tone(soundPin, melody[thisNote], noteDuration);
@@ -285,4 +365,24 @@ void alarm(){
     delay(pauseBetweenNotes);
     noTone(soundPin);
   }
+}
+
+// Función para animación Autoevaluación
+void animation_question(){
+  display.clearDisplay();
+  q = true;
+  display.drawBitmap(0,0,eyes,128,64, WHITE);
+  display.display();
+  while(q==true){
+    delay(100);
+    interrupts++;
+    if (interrupts == 200){
+      q = false;
+      visualize();
+      detachInterrupt(digitalPinToInterrupt(buttonPin1));
+      detachInterrupt(digitalPinToInterrupt(buttonPin2));
+    }
+  }
+  scheduledTicker.attach_ms_scheduled(1000, onTime);
+  interrupts=0;
 }
