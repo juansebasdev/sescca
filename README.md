@@ -1,10 +1,10 @@
 # SESCCA
-Prototipos para control conductual de estudiantes.
+Proyecto para el desarollo de prototipos que permitan una realimentación de la conducta de los estudiantes en el aula de clases.
 
-# Progamación
+## Programación
 Arduino IDE
 
-# Composición de Prototipos
+## Composición de Prototipos
 
 * Controlador: Tarjeta de desarrollo ESP8266
 + Actuadores: Botones, Parlante y pantalla de visualización
