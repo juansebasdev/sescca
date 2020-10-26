@@ -7,6 +7,6 @@ Arduino IDE
 ## Composición de Prototipos
 
 * Controlador: Tarjeta de desarrollo ESP8266
-+ Actuadores: Botones, Parlante y pantalla de visualización
-- Sensores: consta de dos sensores de presencia
++ Actuadores: Botones o Pulsadores, Motor para señal de vibración y cinta LED WS2812
+- Sensores: Sensores Infrarrojo Detectores de obstáculos 2-30cm
 * Comunicación: Envío de datos a través de HTTPClient y Recepción de datos como servidor Local
