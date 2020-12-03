@@ -249,7 +249,7 @@ void send_data(){
   if(WiFi.status() == WL_CONNECTED){
     HTTPClient http;
 
-    String data_to_send = "number=" + String(cont) + "&mov=" + String(mov) + "&id=" + id;
+    String data_to_send = "number=" + String(cont) + "&id=" + id;
     Serial.println(data_to_send);
 
     http.begin("http://192.168.1.200/datos-prueba.php");
