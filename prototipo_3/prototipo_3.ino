@@ -7,7 +7,7 @@
  * Envío de datos como Cliente a través de HTTPCLient
  * Recepción de datos como Servidor
  * Elaborado por : Juan Sebastián Bravo Meneses
- * Versión: 1.1
+ * Versión: 1.2
  */
 
 #include <Adafruit_NeoPixel.h>
@@ -15,12 +15,6 @@
   #include <avr/power.h>
 #endif
 
-// Interrupción Timer
-//#include <Ticker.h>
-//Ticker scheduledTicker;
-
-volatile int interrupts;
-//int number = random(10, 15);
 
 // Pin salida Neopixel
 #define LED 13
@@ -32,8 +26,6 @@ Adafruit_NeoPixel pixels(NUMPIXELS, LED, NEO_GRB+NEO_KHZ800);
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-
-#include "pitches.h"
 
 
 // Conexión a Red
@@ -65,38 +57,13 @@ const byte led1 = 16;
 const byte led2 = 0;
 
 // Variables para nivel de conducta
-short int cont=0, cont_aux=0;
-bool q =false;
+short int cont=4, cont_aux=4;
+int mov=0;
+bool q = false, complete = false;
 
 // Variables para envío y recepción de datos
 bool data = false, alert = false;
 String id="23";
-int mov=0;
-
-// Función Interrupcion Timer
-//void onTime(){
-//  interrupts++;
-//  if(interrupts==number){
-//    data = true;
-//    alert = true;
-//    interrupts = 0;
-//    number = random(40, 60);
-//    Serial.println(number);
-//    scheduledTicker.detach();
-//  }
-//}
-//void ICACHE_RAM_ATTR onTime(){
-//  interrupts++;
-//  timer1_write(2500000);
-//  Serial.println(interrupts);
-//  if(interrupts==number){
-//    data = true;
-//    alert = true;
-//    interrupts = 0;
-//    number = random(10, 25)*2;
-//    Serial.println(number);
-//  }
-//}
 
 // Funciones Interrupcion Botones
 ICACHE_RAM_ATTR void cont_plus(){
@@ -129,15 +96,6 @@ void setup(){
 
   server.begin();
   delay(100);
-
-  // Iniciar Timer
-//  scheduledTicker.attach_ms_scheduled(1000, onTime);
-//  timer1_isr_init();
-//  timer1_attachInterrupt(onTime);
-//  timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
-//  timer1_write(2500000);
-
-  //Serial.println(number);
   
   // Configuración LED
   #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
@@ -165,36 +123,91 @@ void setup(){
 }
 
 void loop(){
-  //pixels.clear();  
-  //visualize(cont);
   receive_from_client();
   if(cont!=cont_aux){
-    animation(cont,cont_aux);
     if(cont_aux<0){
       cont_aux=0;
+    } else if(cont_aux>5){
+      cont_aux = 5;
     }
     cont = cont_aux;
-    visualize(cont);
     send_data();
+    visualize(cont);
   }
   if(data==true){
     data = false;
     if(alert==true){
-      Serial.println("Alerta");
+      // Serial.println("Alerta");
       attachInterrupt(digitalPinToInterrupt(buttonPin1), cont_plus, RISING);    
       attachInterrupt(digitalPinToInterrupt(buttonPin2), cont_minus, RISING);
-      alarm();
       alert = false;
       animation_question();
     }
   }
-  if(cont>5){
-    cont=5;
-    cont_aux=5;
-  }
   if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
     //mov++;
     //send_data();
+  }
+  if(cont == 5){
+    complete = true;
+    delay(5000);
+    while(cont==5){
+      receive_from_client();
+      if(data == true)
+        data = false;
+      pixels.clear();
+      for(int i = 0; i < NUMPIXELS; i++){
+        pixels.setPixelColor(i, pixels.Color(120, 50, 50));
+        pixels.show();
+        delay(100);
+      }
+      pixels.clear();
+      for(int i = NUMPIXELS-1; i >= 0; i--){
+        pixels.setPixelColor(i, pixels.Color(120, 50, 50));
+        pixels.show();
+        delay(100);
+      }
+    }    
+  }
+}
+
+// Función de Visualización LED 
+void visualize(int counter){
+  pixels.clear();
+  for(int i=0; i<counter+3;i++){
+    pixels.setPixelColor(i, pixels.Color(0, 50, 0));
+  }
+  pixels.show();
+}
+
+// Función para animación Autoevaluación
+void animation_question(){
+  pixels.clear();
+  int i = 0;
+  q = true;
+  while (q = true){
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, HIGH);
+    delay(400);
+    analogWrite(vibePin, 600);
+    delay(300);
+        
+    digitalWrite(led1, LOW);
+    digitalWrite(led2, LOW);
+    analogWrite(vibePin, 0);
+    delay(300);
+
+    i++;
+    if(i==5){
+      q = false;
+      visualize(cont);
+      digitalWrite(led1, LOW);
+      digitalWrite(led2, LOW);
+      analogWrite(vibePin, 0);
+      detachInterrupt(digitalPinToInterrupt(buttonPin1));
+      detachInterrupt(digitalPinToInterrupt(buttonPin2));
+      break;
+    }
   }
 }
 
@@ -225,6 +238,10 @@ void receive_from_client(){
               cont_aux--;
             } else if(header.indexOf("GET /?data=alert")>=0){
               alert = true;
+            } else if (header.indexOf("GET /?recount=true")>=0){
+              complete = false;
+              cont_aux = 0;
+              cont = cont_aux;
             }
             data = true;
             break;
@@ -274,94 +291,4 @@ void send_data(){
   }
   delay(2000);
   server.begin();
-}
-
-
-
-// Función para animación
-void animation(short int cont1, short int cont2){
-  int j=0;
-  if(cont2>cont1){
-    while(j<2){
-      pixels.clear();
-      for(int i=0; i<cont2+3;i++){
-        pixels.setPixelColor(i, pixels.Color(50, 220, 0));
-        pixels.show();
-        delay(200);
-      }
-      //alarm();
-      j++;
-    }
-    j=0;
-  }else if(cont2<cont1){
-    while(j<2){
-      pixels.clear();
-      for(int i=NUMPIXELS-1; i>=0;i--){
-        pixels.setPixelColor(i, pixels.Color(220, 50, 0));
-        pixels.show();
-        delay(200);
-      }
-      //alarm();
-      j++;
-    }
-    j=0;
-  }
-}
-
-// Función de Visualización LED 
-void visualize(int counter){
-  pixels.clear();
-  for(int i=0; i<counter+3;i++){
-    pixels.setPixelColor(i, pixels.Color(0, 50, 0));
-  }
-  pixels.show();
-}
-
-// Función de Motor(vibración)
-void alarm(){
-  int i = 0;
-  for(i=0;i<3;i++){
-    analogWrite(vibePin, 800);
-    delay(300);
-    analogWrite(vibePin, 0);
-    delay(700);
-  }
-}
-
-// Función para animación Autoevaluación
-void animation_question(){
-  q = true;
-  while(q==true){
-    // Serial.println(interrupts);
-    pixels.clear();
-//    analogWrite(vibePin, 800);
-//    delay(200);
-//    analogWrite(vibePin, 0);
-    for(int i=NUMPIXELS-1; i>=0;i--){
-        pixels.setPixelColor(i, pixels.Color(120, 50, 50));
-        pixels.show();
-        digitalWrite(led1, HIGH);
-        digitalWrite(led2, HIGH);
-        delay(100);
-    }
-    pixels.clear();
-    for(int i=0; i<NUMPIXELS;i++){
-        pixels.setPixelColor(i, pixels.Color(120, 50, 50));
-        pixels.show();
-        digitalWrite(led1, LOW);
-        digitalWrite(led2, LOW);
-        delay(100);
-    }
-    interrupts = interrupts+2;
-    if (interrupts == 8){
-      q = false;
-      pixels.clear();
-      analogWrite(vibePin, 0);
-      visualize(cont);
-      detachInterrupt(digitalPinToInterrupt(buttonPin1));
-      detachInterrupt(digitalPinToInterrupt(buttonPin2));
-    }
-  }
-  //scheduledTicker.attach_ms_scheduled(1000, onTime);
-  interrupts=0;
 }
