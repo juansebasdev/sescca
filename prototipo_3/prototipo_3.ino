@@ -153,8 +153,6 @@ void loop(){
     delay(5000);
     while(cont==5){
       receive_from_client();
-      if(data == true)
-        data = false;
       pixels.clear();
       for(int i = 0; i < NUMPIXELS; i++){
         pixels.setPixelColor(i, pixels.Color(120, 50, 50));
@@ -167,7 +165,10 @@ void loop(){
         pixels.show();
         delay(100);
       }
-    }    
+    }
+    if(data == true)
+        data = false;
+    visualize(cont);    
   }
 }
 
