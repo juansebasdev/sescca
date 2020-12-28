@@ -29,8 +29,8 @@ Adafruit_NeoPixel pixels(NUMPIXELS, LED, NEO_GRB+NEO_KHZ800);
 
 
 // Conexión a Red
-const char* ssid     = "MOVISTAR_FIBRA_8EF0"; // Nombre Red
-const char* password = "8227854698"; // Contraseña Red
+const char* ssid     = ""; // Nombre Red
+const char* password = ""; // Contraseña Red
 
 // Puerto para servidor
 WiFiServer server(80);
