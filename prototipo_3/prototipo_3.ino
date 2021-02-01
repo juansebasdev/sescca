@@ -1,6 +1,6 @@
 /*
  * Proyecto SESCCA
- * Desarrollo de prototipo 3 de tipo conductual para estudiantes.
+ * Desarrollo de prototipo conductual para estudiantes.
  * Controlador: ESP8266
  * Actuadores: 2 botones de tipo NA, Cinta LED Neopixel", Motor DC 3v(vibraciones), 2 leds
  * Sensores: 2 sensores de proximidad
@@ -57,7 +57,7 @@ const byte led1 = 16;
 const byte led2 = 0;
 
 // Variables para nivel de conducta
-short int cont=4, cont_aux=4;
+short int cont=0, cont_aux=0;
 int mov=0;
 bool q = false, complete = false;
 
@@ -95,7 +95,7 @@ void setup(){
   Serial.println(WiFi.localIP());
 
   server.begin();
-  delay(100);
+  delay(200);
   
   // Configuración LED
   #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
@@ -130,8 +130,13 @@ void loop(){
     } else if(cont_aux>5){
       cont_aux = 5;
     }
-    cont = cont_aux;
-    send_data();
+    if (cont_aux > cont){
+      cont = cont_aux;
+      send_data(1); 
+    } else {
+      cont = cont_aux;
+      send_data(0);
+    }
     visualize(cont);
   }
   if(data==true){
@@ -243,6 +248,7 @@ void receive_from_client(){
               complete = false;
               cont_aux = 0;
               cont = cont_aux;
+              visualize(cont);
             }
             data = true;
             break;
@@ -262,15 +268,16 @@ void receive_from_client(){
 }
 
 // Función para envío de datos como cliente
-void send_data(){
+void send_data(int state){
   server.stop();
   if(WiFi.status() == WL_CONNECTED){
     HTTPClient http;
+  
+    String data_to_send = "number=" + String(cont) + "&id=" + id + "&state=" + state;
 
-    String data_to_send = "number=" + String(cont) + "&id=" + id;
     Serial.println(data_to_send);
 
-    http.begin("http://192.168.1.200/datos-prueba.php");
+    http.begin("http://192.168.1.200/data_from_board.php");
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
     int code_request = http.POST(data_to_send);
