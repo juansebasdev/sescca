@@ -1,4 +1,4 @@
-/*
+at/*
  * Proyecto SESCCA
  * Desarrollo de prototipo conductual para estudiantes.
  * Controlador: ESP8266
@@ -57,8 +57,9 @@ const byte led1 = 16;
 const byte led2 = 0;
 
 // Variables para nivel de conducta
-short int cont=0, cont_aux=0;
-int mov=0;
+short int cont=3, cont_aux=3;
+unsigned int mov=0, nomov=0;
+short int disrupt = 0;
 bool q = false, complete = false;
 
 // Variables para envío y recepción de datos
@@ -127,8 +128,8 @@ void loop(){
   if(cont!=cont_aux){
     if(cont_aux<0){
       cont_aux=0;
-    } else if(cont_aux>5){
-      cont_aux = 5;
+    } else if(cont_aux>8){
+      cont_aux = 8;
     }
     if (cont_aux > cont){
       cont = cont_aux;
@@ -150,23 +151,45 @@ void loop(){
     }
   }
   if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
-    //mov++;
-    //send_data();
+    mov++;
+    delay(100);
+    Serial.println("Mov ");
+    Serial.println(mov);
+    if(mov == 200) {
+      mov = 0;
+      nomov = 0;
+      disrupt = 1;
+      send_data(2);
+    }
   }
-  if(cont == 5){
+  if(digitalRead(sensorPin1)==LOW || digitalRead(sensorPin2)==LOW){
+    if (mov > 0){
+      nomov++;
+      delay(100);
+      Serial.println("NoMov ");
+      Serial.print(nomov);
+      if(nomov == 200){
+        disrupt = 0;
+        mov = 0;
+        nomov = 0;
+        send_data(2);
+      }
+    }
+  }
+  if(cont == 8){
     complete = true;
     delay(5000);
-    while(cont==5){
+    while(cont==8){
       receive_from_client();
       pixels.clear();
       for(int i = 0; i < NUMPIXELS; i++){
-        pixels.setPixelColor(i, pixels.Color(120, 50, 50));
+        pixels.setPixelColor(i, pixels.Color(6, 5, 5));
         pixels.show();
         delay(100);
       }
       pixels.clear();
       for(int i = NUMPIXELS-1; i >= 0; i--){
-        pixels.setPixelColor(i, pixels.Color(120, 50, 50));
+        pixels.setPixelColor(i, pixels.Color(6, 5, 5));
         pixels.show();
         delay(100);
       }
@@ -180,8 +203,8 @@ void loop(){
 // Función de Visualización LED 
 void visualize(int counter){
   pixels.clear();
-  for(int i=0; i<counter+3;i++){
-    pixels.setPixelColor(i, pixels.Color(0, 50, 0));
+  for(int i=0; i<counter;i++){
+    pixels.setPixelColor(i, pixels.Color(0, 3, 0));
   }
   pixels.show();
 }
@@ -272,13 +295,23 @@ void send_data(int state){
   server.stop();
   if(WiFi.status() == WL_CONNECTED){
     HTTPClient http;
-  
-    String data_to_send = "number=" + String(cont) + "&id=" + id + "&state=" + state;
+    String data_to_send;
+    if (state < 2){
+      data_to_send = "number=" + String(cont) + "&id=" + id + "&state=" + state + "&drpt=" + String(disrupt);
 
-    Serial.println(data_to_send);
+      Serial.println(data_to_send);
 
-    http.begin("http://192.168.1.200/data_from_board.php");
-    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      // http.begin("http://192.168.1.200/data_from_board.php");
+      http.begin("http://sescca.duckdns.org/receive/");
+      http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    } else {
+      data_to_send = "drpt=" + String(disrupt) + "&id=" + id;
+
+      Serial.println(data_to_send);
+
+      http.begin("http://192.168.1.200/disrupt_from_board.php");
+      http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    }
 
     int code_request = http.POST(data_to_send);
 
