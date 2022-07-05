@@ -1,4 +1,4 @@
-at/*
+/*
  * Proyecto SESCCA
  * Desarrollo de prototipo conductual para estudiantes.
  * Controlador: ESP8266
@@ -34,6 +34,9 @@ const char* password = ""; // Contraseña Red
 
 // Puerto para servidor
 WiFiServer server(80);
+IPAddress local_IP(192, 168, 43, 205); // dirección IP
+IPAddress gateway(192, 168, 43, 1); // Gateway IP 
+IPAddress subnet(255, 255, 255, 0);
 
 // Variable para guardar HTTP request
 String header;
@@ -82,6 +85,9 @@ ICACHE_RAM_ATTR void cont_minus(){
 
 void setup(){
   Serial.begin(115200);
+  if (!WiFi.config(local_IP, gateway, subnet)){
+    Serial.println("STA Failed to configure");
+  }
   delay(1000);
   Serial.print("Conectando a ");
   Serial.println(ssid);
@@ -153,8 +159,8 @@ void loop(){
   if(digitalRead(sensorPin1)==HIGH && digitalRead(sensorPin2)==HIGH){
     mov++;
     delay(100);
-    Serial.println("Mov ");
-    Serial.println(mov);
+    // Serial.println("Mov ");
+    // Serial.println(mov);
     if(mov == 200) {
       mov = 0;
       nomov = 0;
@@ -166,8 +172,8 @@ void loop(){
     if (mov > 0){
       nomov++;
       delay(100);
-      Serial.println("NoMov ");
-      Serial.print(nomov);
+      // Serial.println("NoMov ");
+      // Serial.print(nomov);
       if(nomov == 200){
         disrupt = 0;
         mov = 0;
@@ -293,7 +299,8 @@ void receive_from_client(){
 // Función para envío de datos como cliente
 void send_data(int state){
   server.stop();
-  if(WiFi.status() == WL_CONNECTED){
+  WiFiClient client;
+  if(client.status() == WL_CONNECTED){
     HTTPClient http;
     String data_to_send;
     if (state < 2){
@@ -302,14 +309,14 @@ void send_data(int state){
       Serial.println(data_to_send);
 
       // http.begin("http://192.168.1.200/data_from_board.php");
-      http.begin("http://sescca.duckdns.org/receive/");
+      http.begin(client, "http://sescca.duckdns.org/receive/");
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
     } else {
       data_to_send = "drpt=" + String(disrupt) + "&id=" + id;
 
       Serial.println(data_to_send);
 
-      http.begin("http://192.168.1.200/disrupt_from_board.php");
+      http.begin(client, "http://192.168.43.200/disrupt_from_board.php");
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
     }
 
