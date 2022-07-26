@@ -303,6 +303,7 @@ void send_data(int state){
   if(WiFi.status() == WL_CONNECTED){
     HTTPClient http;
     String data_to_send;
+    int code_request = 0;
     if (state < 2){
       data_to_send = "number=" + String(cont) + "&id=" + id + "&state=" + state + "&drpt=" + String(disrupt);
 
@@ -312,6 +313,7 @@ void send_data(int state){
       // http.begin(client, "http://sescca.duckdns.org/receive/");
       http.begin(client, "http://192.168.43.200:8000/evaluation/receive/?" + data_to_send);
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      code_request = http.GET();
     } else {
       data_to_send = "drpt=" + String(disrupt) + "&id=" + id;
 
@@ -319,10 +321,8 @@ void send_data(int state){
 
       http.begin(client, "http://192.168.43.200/disrupt_from_board.php");
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      code_request = http.POST(data_to_send);
     }
-
-    int code_request = http.GET();
-
     if(code_request>0){
       Serial.println("Código HTTP > " 
       + String(code_request));
