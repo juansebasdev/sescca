@@ -34,7 +34,7 @@ const char* password = ""; // Contraseña Red
 
 // Puerto para servidor
 WiFiServer server(80);
-IPAddress local_IP(192, 168, 43, 205); // dirección IP
+IPAddress local_IP(192, 168, 43, 212); // dirección IP
 IPAddress gateway(192, 168, 43, 1); // Gateway IP 
 IPAddress subnet(255, 255, 255, 0);
 
@@ -67,7 +67,7 @@ bool q = false, complete = false;
 
 // Variables para envío y recepción de datos
 bool data = false, alert = false;
-String id="23";
+String id="12";
 
 // Funciones Interrupcion Botones
 ICACHE_RAM_ATTR void cont_plus(){
@@ -300,7 +300,7 @@ void receive_from_client(){
 void send_data(int state){
   server.stop();
   WiFiClient client;
-  if(client.status() == WL_CONNECTED){
+  if(WiFi.status() == WL_CONNECTED){
     HTTPClient http;
     String data_to_send;
     if (state < 2){
@@ -308,8 +308,9 @@ void send_data(int state){
 
       Serial.println(data_to_send);
 
-      // http.begin("http://192.168.1.200/data_from_board.php");
-      http.begin(client, "http://sescca.duckdns.org/receive/");
+      // http.begin(client, "http://192.168.43.200/data_from_board.php");
+      // http.begin(client, "http://sescca.duckdns.org/receive/");
+      http.begin(client, "http://192.168.43.200:8000/evaluation/receive/?" + data_to_send);
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
     } else {
       data_to_send = "drpt=" + String(disrupt) + "&id=" + id;
@@ -320,10 +321,11 @@ void send_data(int state){
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
     }
 
-    int code_request = http.POST(data_to_send);
+    int code_request = http.GET();
 
     if(code_request>0){
-      Serial.println("Código HTTP > " + String(code_request));
+      Serial.println("Código HTTP > " 
+      + String(code_request));
 
       if(code_request==200){
         String body_request = http.getString();
